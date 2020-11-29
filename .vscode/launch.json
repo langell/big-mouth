@@ -1,0 +1,61 @@
+{
+    // Use IntelliSense to learn about possible attributes.
+    // Hover to view descriptions of existing attributes.
+    // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "type": "node",
+            "request": "launch",
+            "name": "get-index",
+            "program": "${workspaceRoot}/node_modules/serverless/bin/serverless",
+            "args" : [
+                "invoke",
+                "local",
+                "-f",
+                "get-index",
+                "--data",
+                "{}"
+            ],
+            "env": {
+                "RESTAURANTS_API" : " https://ilmkahna74.execute-api.us-east-1.amazonaws.com/dev/restaurants",
+                "cognito_user_pool_id" : "us-east-1_piW1hFtMZ",
+                "cognito_client_id" : "13ttci6knvovh21qj36ep76egb"
+            }
+        },
+        {
+            "type": "node",
+            "request": "launch",
+            "name": "get-restaurants",
+            "program": "${workspaceRoot}/node_modules/serverless/bin/serverless",
+            "args" : [
+                "invoke",
+                "local",
+                "-f",
+                "get-restaurants",
+                "--data",
+                "{}"
+            ],
+            "env": {
+                "RESTAURANTS_TABLE": "restaurants"
+            }
+        },
+        {
+            "type": "node",
+            "request": "launch",
+            "name": "search-restaurants",
+            "program": "${workspaceRoot}/node_modules/serverless/bin/serverless",
+            "args" : [
+                "invoke",
+                "local",
+                "-f",
+                "search-restaurants",
+                "-p",
+                "examples/search-restaurants.json"
+            ],
+            "env": {
+                "RESTAURANTS_TABLE": "restaurants"
+            }
+        }
+    ]
+}

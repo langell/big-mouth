@@ -1,0 +1,67 @@
+
+service: big-mouth
+frameworkVersion: '2'
+
+plugins:
+  - serverless-pseudo-parameters
+
+provider:
+  name: aws
+  runtime: nodejs12.x
+  iamRoleStatements:
+    - Effect: Allow
+      Action: dynamodb:scan
+      Resource: arn:aws:dynamodb:#{AWS::Region}:#{AWS::AccountId}:table/restaurants
+    - Effect: Allow
+      Action: execute-api:Invoke
+      Resource: arn:aws:execute-api:#{AWS::Region}:#{AWS::AccountId}:*/*/GET/restaurants
+
+functions:
+  get-index:
+    handler: functions/get-index.handler
+    events:
+      - http:
+          path: /
+          method: get
+    environment:
+      RESTAURANTS_API: https://ilmkahna74.execute-api.us-east-1.amazonaws.com/dev/restaurants
+      cognito_user_pool_id: us-east-1_piW1hFtMZ
+      cognito_client_id: 13ttci6knvovh21qj36ep76egb
+    
+
+  get-restaurants:
+    handler: functions/get-restaurants.handler
+    events:
+      - http:
+          path: /restaurants
+          method: get
+          authorizer: aws_iam
+    environment:
+      RESTAURANTS_TABLE: restaurants
+  
+  search-restaurants:
+    handler: functions/search-restaurants.handler
+    events:
+      - http:
+          path: /restaurants/search
+          method: post
+          authorizer: 
+            arn: arn:aws:cognito-idp:us-east-1:636864141942:userpool/us-east-1_piW1hFtMZ
+    environment:
+      RESTAURANTS_TABLE: restaurants
+
+resources:
+  Resources:
+    restaurantsTable:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        TableName: restaurants
+        AttributeDefinitions:
+          - AttributeName: name
+            AttributeType: S
+        KeySchema:
+          - AttributeName: name
+            KeyType: HASH
+        ProvisionedThroughput:
+          ReadCapacityUnits: 1
+          WriteCapacityUnits: 1
