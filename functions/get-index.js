@@ -11,6 +11,7 @@ const cognitoUserPoolId = process.env.cognito_user_pool_id;
 const cognitoClientId = process.env.cognito_client_id;
 
 const restaurantsApiRoot = process.env.RESTAURANTS_API;
+const ordersApiRoot = process.env.orders_api;
 const days = [
   "Sunday",
   "Monday",
@@ -63,6 +64,7 @@ module.exports.handler = async (event) => {
     cognitoUserPoolId,
     cognitoClientId,
     searchUrl: `${restaurantsApiRoot}/search`,
+    placeOrderUrl: `${ordersApiRoot}`
   };
   let html = Mustache.render(template, view);
 
