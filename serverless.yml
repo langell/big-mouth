@@ -1,6 +1,5 @@
-
 service: big-mouth
-frameworkVersion: '2'
+frameworkVersion: "2"
 
 plugins:
   - serverless-pseudo-parameters
@@ -18,6 +17,13 @@ provider:
     - Effect: Allow
       Action: kinesis:PutRecord
       Resource: arn:aws:kinesis:#{AWS::Region}:#{AWS::AccountId}:stream/order-events
+    - Effect: Allow
+      Action: sns:Publish
+      Resource:
+        - arn:aws:sns:#{AWS::Region}:#{AWS::AccountId}:restaurant-notification
+        - arn:aws:sns:#{AWS::Region}:#{AWS::AccountId}:restaurant-notification-retry
+        - arn:aws:sns:#{AWS::Region}:#{AWS::AccountId}:user-notification
+        - arn:aws:sns:#{AWS::Region}:#{AWS::AccountId}:user-notification-retry
 
 functions:
   get-index:
@@ -31,7 +37,6 @@ functions:
       orders_api: https://ilmkahna74.execute-api.us-east-1.amazonaws.com/dev/orders
       cognito_user_pool_id: us-east-1_piW1hFtMZ
       cognito_client_id: 13ttci6knvovh21qj36ep76egb
-    
 
   get-restaurants:
     handler: functions/get-restaurants.handler
@@ -42,14 +47,14 @@ functions:
           authorizer: aws_iam
     environment:
       RESTAURANTS_TABLE: restaurants
-  
+
   search-restaurants:
     handler: functions/search-restaurants.handler
     events:
       - http:
           path: /restaurants/search
           method: post
-          authorizer: 
+          authorizer:
             arn: arn:aws:cognito-idp:#{AWS::Region}:#{AWS::AccountId}:userpool/us-east-1_piW1hFtMZ
     environment:
       RESTAURANTS_TABLE: restaurants
@@ -61,7 +66,63 @@ functions:
           path: /orders
           method: post
           authorizer:
-            arn: arn:aws:cognito-idp:#{AWS::Region}:#{AWS::AccountId}:userpool/us-east-1_piW1hFtMZ
+            arn: arn:aws:cognito-idp:#{AWS::Region}:#{AWS::AccountId}:userpool/us-east-1_DfuAwa0vB
+    environment:
+      order_events_stream: order-events
+
+  notify-restaurant:
+    handler: functions/notify-restaurant.handler
+    events:
+      - stream:
+          arn: arn:aws:kinesis:#{AWS::Region}:#{AWS::AccountId}:stream/order-events
+    environment:
+      order_events_stream: order-events
+      restaurant_notification_topic: arn:aws:sns:#{AWS::Region}:#{AWS::AccountId}:restaurant-notification
+      restaurant_notification_retry_topic: arn:aws:sns:#{AWS::Region}:#{AWS::AccountId}:restaurant-notification-retry
+
+  retry-notify-restaurant:
+    handler: functions/retry-notify-restaurant.handler
+    events:
+      - sns: restaurant-notification-retry
+    environment:
+      order_events_stream: order-events
+      restaurant_notification_topic: arn:aws:sns:#{AWS::Region}:#{AWS::AccountId}:restaurant-notification
+    onError: arn:aws:sns:#{AWS::Region}:#{AWS::AccountId}:restaurant-notification-dlq
+
+  accept-order:
+    handler: functions/accept-order.handler
+    events:
+      - http:
+          path: /orders/accept
+          method: post
+    environment:
+      order_events_stream: order-events
+
+  notify-user:
+    handler: functions/notify-user.handler
+    events:
+      - stream:
+          arn: arn:aws:kinesis:#{AWS::Region}:#{AWS::AccountId}:stream/order-events
+    environment:
+      order_events_stream: order-events
+      user_notification_topic: arn:aws:sns:#{AWS::Region}:#{AWS::AccountId}:user-notification
+      user_notification_retry_topic: arn:aws:sns:#{AWS::Region}:#{AWS::AccountId}:user-notification-retry
+
+  retry-notify-user:
+    handler: functions/retry-notify-user.handler
+    events:
+      - sns: user-notification-retry
+    environment:
+      order_events_stream: order-events
+      user_notification_topic: arn:aws:sns:#{AWS::Region}:#{AWS::AccountId}:user-notification
+    onError: arn:aws:sns:#{AWS::Region}:#{AWS::AccountId}:user-notification-dlq
+
+  fulfill-order:
+    handler: functions/fulfill-order.handler
+    events:
+      - http:
+          path: /orders/complete
+          method: post
     environment:
       order_events_stream: order-events
 
@@ -83,6 +144,30 @@ resources:
 
     orderEventsStream:
       Type: AWS::Kinesis::Stream
-      Properties: 
+      Properties:
         Name: order-events
         ShardCount: 1
+
+    restaurantNotificationTopic:
+      Type: AWS::SNS::Topic
+      Properties:
+        DisplayName: restaurant-notification
+        TopicName: restaurant-notification
+
+    userNotificationTopic:
+      Type: AWS::SNS::Topic
+      Properties:
+        DisplayName: user-notification
+        TopicName: user-notification
+
+    restaurantNotificationDLQTopic:
+      Type: AWS::SNS::Topic
+      Properties: 
+        DisplayName: restaurant-notification-dlq
+        TopicName: restaurant-notification-dlq
+
+    userNotificationDLQTopic:
+      Type: AWS::SNS::Topic
+      Properties: 
+        DisplayName: user-notification-dlq
+        TopicName: user-notification-dlq
