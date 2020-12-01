@@ -14,10 +14,6 @@ const UNAUTHORIZED = {
 
 module.exports.handler = co.wrap(function* (event, context, cb) {
 
-  console.log(
-    `Start placing order`
-  );
-
   let restaurantName = JSON.parse(event.body).restaurantName;
 
   let userEmail = _.get(event, "requestContext.authorizer.claims.email");
